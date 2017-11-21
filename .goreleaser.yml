@@ -1,0 +1,8 @@
+builds:
+  - binary: gl
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
