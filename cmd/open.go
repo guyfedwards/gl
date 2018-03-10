@@ -1,33 +1,24 @@
-// Copyright © 2018 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
 	"fmt"
+	"log"
+	"os/exec"
+	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 // openCmd represents the open command
 var openCmd = &cobra.Command{
-	Use:     "open",
 	Aliases: []string{"o"},
-	Short:   "open in gitlab",
-	Long: `Open current repo in gitlab. To go to a specific page, pass options`
+	Args:    cobra.NoArgs,
+	Use:     "open",
+	Short:   "Open in gitlab",
+	Long:    `Open current repo in gitlab. To go to a specific page, pass options`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("open called")
+		openBrowser(getRemoteURL())
 	},
 }
 
@@ -43,4 +34,40 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// openCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func openBrowser(url string) {
+	var err error
+
+	switch runtime.GOOS {
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("start", url).Start()
+	default:
+		err = fmt.Errorf("Unsupported platform")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func getRemoteURL() string {
+	var (
+		cmdOut []byte
+		err    error
+	)
+	if cmdOut, err = exec.Command("git", "remote", "-v").Output(); err != nil {
+		log.Fatal("Error executing git command: ", err)
+	}
+
+	rem := strings.Split(string(cmdOut), "\n")[0]
+	return replaceString(rem)
+}
+
+func replaceString(s string) string {
+	r := strings.NewReplacer("git@", "http://", ":", "/", ".git", "")
+	return r.Replace(strings.Fields(s)[1])
 }
