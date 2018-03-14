@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -21,6 +20,12 @@ type Payload struct {
 	Title        string `json:"title"`
 }
 
+var (
+	target string
+	source string
+	title  string
+)
+
 // mergeRequestCmd represents the merge command
 var mergeRequestCmd = &cobra.Command{
 	Args:    cobra.OnlyValidArgs,
@@ -32,35 +37,26 @@ origin/master. Example usage:
 
 $ gl merge`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if !viper.IsSet("token") {
-			fmt.Println(`You must set Gitlab token before proceeding.
-$ gl config set token <token>
-			`)
+		tokenCheck()
+
+		if title == "" {
+			fmt.Printf("You must provide a title. \n$ gl merge-request -T \"This is my title\"\n")
 			os.Exit(1)
 		}
-		//TODO get current branch as default source
-		var (
-			source string = getCurrentBranch()
-			target string = "master"
-			title  string = "WIP: Default Title"
-		)
 
-		fmt.Println(source, target, title)
-
-		// TODO url encode project
-		e := url.PathEscape("frontend/common-ui")
-		fmt.Println(e)
-
-		//store api version in config
 		// TODO create from remote
-		url := "https://gitlab.algomi.net/api/v4/projects/frontend%2Fcommon-ui/merge_requests"
+		url := buildURL("merge_request")
+		fmt.Println(url)
 
 		p := &Payload{
 			SourceBranch: "ge-proptypes",
 			TargetBranch: "master",
 			Title:        "WIP: test",
 		}
-		j, _ := json.Marshal(p)
+		j, err := json.Marshal(p)
+		if err != nil {
+			panic(fmt.Sprintln("Error marshalling JSON"))
+		}
 
 		// client := &http.Client{}
 
@@ -87,12 +83,10 @@ $ gl config set token <token>
 
 func init() {
 	rootCmd.AddCommand(mergeRequestCmd)
-
-}
-
-func buildURL(base string, group string, project string) string {
-
-	return strings.Join([]string{"https://gitlab.algomi.net", "/api/v4/", ""}, "")
+	// TODO add flags target, source, title, desc, approvers etc
+	mergeRequestCmd.Flags().StringVarP(&source, "source", "s", getCurrentBranch(), "Source branch")
+	mergeRequestCmd.Flags().StringVarP(&target, "target", "t", "master", "Target branch")
+	mergeRequestCmd.Flags().StringVarP(&title, "title", "T", "", "Title for merge request")
 }
 
 func getCurrentBranch() string {
@@ -101,13 +95,9 @@ func getCurrentBranch() string {
 		err    error
 	)
 
-	if cmdOut, err = exec.Command("git", "rev-parse", "--abbrev-ref HEAD").Output(); err != nil {
+	if cmdOut, err = exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err != nil {
 		panic("Error running `git rev-parse --abbrev-ref HEAD` \n" + err.Error())
 	}
 
-	return string(cmdOut)
-}
-
-func encodeProjectName(url string) string {
-	return ""
+	return strings.TrimSpace(string(cmdOut))
 }
