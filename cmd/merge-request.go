@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,12 +19,14 @@ type Payload struct {
 	SourceBranch string `json:"source_branch"`
 	TargetBranch string `json:"target_branch"`
 	Title        string `json:"title"`
+	Description  string `json:"description"`
 }
 
 var (
-	target string
-	source string
-	title  string
+	target      string
+	source      string
+	title       string
+	description string
 )
 
 // mergeRequestCmd represents the merge command
@@ -44,21 +47,21 @@ $ gl merge`,
 			os.Exit(1)
 		}
 
-		// TODO create from remote
-		url := buildURL("merge_request")
+		url := buildURL("merge_requests")
 		fmt.Println(url)
 
 		p := &Payload{
-			SourceBranch: "ge-proptypes",
-			TargetBranch: "master",
-			Title:        "WIP: test",
+			SourceBranch: source,
+			TargetBranch: target,
+			Title:        title,
+			Description:  description,
 		}
 		j, err := json.Marshal(p)
 		if err != nil {
 			panic(fmt.Sprintln("Error marshalling JSON"))
 		}
 
-		// client := &http.Client{}
+		client := &http.Client{}
 
 		b := bytes.NewBuffer([]byte(j))
 		req, err := http.NewRequest("POST", url, b)
@@ -70,14 +73,14 @@ $ gl merge`,
 		req.Header.Set("Private-Token", token)
 		req.Header.Set("Content-Type", "application/json")
 
-		// resp, err := client.Do(req)
-		// if err != nil {
-		// 	fmt.Printf("Error making request: %v", err)
-		// }
-		// defer resp.Body.Close()
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Printf("Error making request: %v", err)
+		}
+		defer resp.Body.Close()
 
-		// body, _ := ioutil.ReadAll(resp.Body)
-		// fmt.Printf("%v", string(body))
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("%v", string(body))
 	},
 }
 
@@ -87,6 +90,7 @@ func init() {
 	mergeRequestCmd.Flags().StringVarP(&source, "source", "s", getCurrentBranch(), "Source branch")
 	mergeRequestCmd.Flags().StringVarP(&target, "target", "t", "master", "Target branch")
 	mergeRequestCmd.Flags().StringVarP(&title, "title", "T", "", "Title for merge request")
+	mergeRequestCmd.Flags().StringVarP(&description, "description", "d", "", "Description for merge request")
 }
 
 func getCurrentBranch() string {

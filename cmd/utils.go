@@ -49,7 +49,7 @@ func buildURL(endpoint string) string {
 	p := url.PathEscape(projectFlag)
 	base := getRemoteParts()[0]
 
-	return strings.Join([]string{base, "/api/v4/", p, "/", endpoint}, "")
+	return strings.Join([]string{base, "/api/v4/projects/", p, "/", endpoint}, "")
 }
 
 func getCurrentProject() string {
