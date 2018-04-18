@@ -2,15 +2,21 @@
 
 Open gitlab for current git repo
 
-### options
-By default will open overview page. Pass flags to head elsewhere :rocket:
+### Usage:
 ```
--c    Open CI/CD page
--i    Open issues page
--m    Open merge requests page
--r    Open registry page
--s    Open settings page
--w    Open wiki page
+  gl [command]
+
+Available Commands:
+  config        A brief description of your command
+  help          Help about any command
+  merge-request Create merge request
+  open          Open in gitlab
+
+Flags:
+  -h, --help             help for gl
+  -p, --project string   Project to run command against. Defaults to current repo. (default "guyfedwards/gl")
+
+Use "gl [command] --help" for more information about a command.
 ```
 
 ### installation
