@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -20,6 +21,11 @@ type Payload struct {
 	TargetBranch string `json:"target_branch"`
 	Title        string `json:"title"`
 	Description  string `json:"description"`
+	AssigneeID   int    `json:"assignee_id"`
+}
+
+type Res struct {
+	WebURL string `json:"web_url"`
 }
 
 var (
@@ -27,6 +33,7 @@ var (
 	source      string
 	title       string
 	description string
+	assigneeID  string
 )
 
 // mergeRequestCmd represents the merge command
@@ -43,22 +50,26 @@ $ gl merge`,
 		tokenCheck()
 
 		if title == "" {
-			fmt.Printf("You must provide a title. \n$ gl merge-request -T \"This is my title\"\n")
-			os.Exit(1)
+			log.Fatal("You must provide a title. \n$ gl merge-request -t \"This is my title\"\n")
 		}
 
 		url := buildURL("merge_requests")
-		fmt.Println(url)
+
+		aID, err := strconv.Atoi(assigneeID)
+		if err != nil {
+			log.Fatal("Error converting assigneeID to int: ", err)
+		}
 
 		p := &Payload{
 			SourceBranch: source,
 			TargetBranch: target,
 			Title:        title,
 			Description:  description,
+			AssigneeID:   aID,
 		}
 		j, err := json.Marshal(p)
 		if err != nil {
-			panic(fmt.Sprintln("Error marshalling JSON"))
+			log.Fatal("Error marshalling JSON", err)
 		}
 
 		client := &http.Client{}
@@ -80,17 +91,23 @@ $ gl merge`,
 		defer resp.Body.Close()
 
 		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Printf("%v", string(body))
+
+		var res Res
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			fmt.Printf("Error unmarshalling JSON response: %v", err)
+		}
+		fmt.Printf("%v\n", res.WebURL)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(mergeRequestCmd)
-	// TODO add flags target, source, title, desc, approvers etc
-	mergeRequestCmd.Flags().StringVarP(&source, "source", "s", getCurrentBranch(), "Source branch")
-	mergeRequestCmd.Flags().StringVarP(&target, "target", "t", "master", "Target branch")
-	mergeRequestCmd.Flags().StringVarP(&title, "title", "T", "", "Title for merge request")
+	mergeRequestCmd.Flags().StringVarP(&source, "source", "S", getCurrentBranch(), "Source branch")
+	mergeRequestCmd.Flags().StringVarP(&target, "target", "T", "master", "Target branch")
+	mergeRequestCmd.Flags().StringVarP(&title, "title", "t", "", "Title for merge request")
 	mergeRequestCmd.Flags().StringVarP(&description, "description", "d", "", "Description for merge request")
+	mergeRequestCmd.Flags().StringVarP(&assigneeID, "assigneeID", "a", "", "Assignee id ")
 }
 
 func getCurrentBranch() string {
