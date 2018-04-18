@@ -1,75 +1,21 @@
+// Copyright © 2018 Guy Edwards <guyfedwards@gmail.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
-import (
-	"flag"
-	"fmt"
-	"log"
-	"os/exec"
-	"runtime"
-	"strings"
-)
+import "github.com/guyfedwards/gl/cmd"
 
 func main() {
-	ciPtr := flag.Bool("c", false, "Open CI/CD page")
-	regPtr := flag.Bool("r", false, "Open registry page")
-	merPtr := flag.Bool("m", false, "Open merge requests page")
-	issPtr := flag.Bool("i", false, "Open issues page")
-	wikPtr := flag.Bool("w", false, "Open wiki page")
-	setPtr := flag.Bool("s", false, "Open settings page")
-
-	flag.Parse()
-
-	var page string
-
-	if *ciPtr {
-		page = "pipelines"
-	} else if *regPtr {
-		page = "container_registry"
-	} else if *merPtr {
-		page = "merge_requests"
-	} else if *issPtr {
-		page = "issues"
-	} else if *wikPtr {
-		page = "wikis/home"
-	} else if *setPtr {
-		page = "edit"
-	}
-
-	openBrowser(getRemoteURL() + "/" + page)
-}
-
-func openBrowser(url string) {
-	var err error
-
-	switch runtime.GOOS {
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("start", url).Start()
-	default:
-		err = fmt.Errorf("Unsupported platform")
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func getRemoteURL() string {
-	var (
-		cmdOut []byte
-		err    error
-	)
-	if cmdOut, err = exec.Command("git", "remote", "-v").Output(); err != nil {
-		log.Fatal("Error executing git command: ", err)
-	}
-
-	rem := strings.Split(string(cmdOut), "\n")[0]
-	return replaceString(rem)
-}
-
-func replaceString(s string) string {
-	r := strings.NewReplacer("git@", "http://", ":", "/", ".git", "")
-	return r.Replace(strings.Fields(s)[1])
+	cmd.Execute()
 }
